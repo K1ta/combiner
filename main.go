@@ -15,7 +15,9 @@ func main() {
 	// 	log.Fatal("must be 2 args")
 	// }
 	// var names = os.Args[1:]
+
 	var names = []string{"photo_5341437942142451795_y.jpg", "photo_5341437942142451796_y.jpg"}
+	// var names = []string{"photo_5341437942142451796_y.jpg", "photo_5341437942142451795_y.jpg"}
 
 	var start = time.Now()
 	var images = readAll(names)
@@ -24,23 +26,50 @@ func main() {
 	fmt.Println(y1, y2, length)
 	fmt.Println(time.Since(start).String())
 
-	var sizeOfOrigin = y1 + length
-	var sizeOfOther = images[1].Bounds().Dy() - length - y2
-	var res2 = image.NewRGBA(image.Rect(0, 0, images[0].Bounds().Dx(), sizeOfOrigin+sizeOfOther))
+	var res image.Image
+	if y1 < y2 {
+		res = combineImages(images[1], images[0], y2, y1, length)
+	} else {
+		res = combineImages(images[0], images[1], y1, y2, length)
+	}
+	// var sizeOfOrigin = y1 + length
+	// var sizeOfOther = images[1].Bounds().Dy() - length - y2
+	// var res2 = image.NewRGBA(image.Rect(0, 0, images[0].Bounds().Dx(), sizeOfOrigin+sizeOfOther))
+	//
+	// for x := 0; x < images[0].Bounds().Dx(); x++ {
+	// 	for y := 0; y < y1+length; y++ {
+	// 		res2.Set(x, y, images[0].At(x, y))
+	// 	}
+	//
+	// 	for y := y2 + length; y < images[1].Bounds().Dy(); y++ {
+	// 		res2.Set(x, y-y2-length+sizeOfOrigin, images[1].At(x, y))
+	// 	}
+	// }
 
-	for x := 0; x < images[0].Bounds().Dx(); x++ {
-		for y := 0; y < y1+length; y++ {
-			res2.Set(x, y, images[0].At(x, y))
+	f1, _ := os.Create("woohoo.jpg")
+	jpeg.Encode(f1, res, nil)
+	f1.Close()
+}
+
+func combineImages(first, second image.Image, firstFromY, secondFromY, length int) image.Image {
+	var (
+		firstLength   = firstFromY + length
+		secondLength  = second.Bounds().Dy() - (secondFromY + length)
+		combinedSizeY = firstLength + secondLength
+		res           = image.NewRGBA(image.Rect(0, 0, first.Bounds().Dx(), combinedSizeY))
+	)
+
+	for x := 0; x < first.Bounds().Dx(); x++ {
+		for y := 0; y < firstLength; y++ {
+			res.Set(x, y, first.At(x, y))
 		}
 
-		for y := y2 + length; y < images[1].Bounds().Dy(); y++ {
-			res2.Set(x, y-y2-length+sizeOfOrigin, images[1].At(x, y))
+		for y := 0; y < secondLength; y++ {
+			res.Set(x, firstLength+y, second.At(x, secondFromY+length+y))
 		}
 	}
 
-	f1, _ := os.Create("woohoo.jpg")
-	jpeg.Encode(f1, res2, nil)
-	f1.Close()
+	return res
 }
 
 func readAll(names []string) []image.Image {
