@@ -5,17 +5,17 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
-	"log"
 	"math"
 	"os"
 	"time"
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		log.Fatal("must be 2 args")
-	}
-	var names = os.Args[1:]
+	// if len(os.Args) != 3 {
+	// 	log.Fatal("must be 2 args")
+	// }
+	// var names = os.Args[1:]
+	var names = []string{"photo_5341437942142451795_y.jpg", "photo_5341437942142451796_y.jpg"}
 
 	var start = time.Now()
 	var images = readAll(names)
@@ -24,32 +24,6 @@ func main() {
 	fmt.Println(y1, y2, length)
 	fmt.Println(time.Since(start).String())
 
-	// var a = imageToRows(images[0], "0.png")
-	// var b = imageToRows(images[1], "1.png")
-	//
-	// var originY, otherY, length = a.overlaps(b)
-	//
-	// fmt.Println(originY, otherY, length)
-	//
-	// // debug print union
-	// var res = image.NewRGBA(image.Rect(0, 0, 1440, length))
-	// for x := 0; x < 720; x++ {
-	// 	for y := originY; y < originY+length; y++ {
-	// 		res.Set(x, y-originY, a.original.At(x, y))
-	// 	}
-	// }
-	//
-	// for x := 0; x < 720; x++ {
-	// 	for y := otherY; y < otherY+length; y++ {
-	// 		res.Set(x+720, y-otherY, b.original.At(x, y))
-	// 	}
-	// }
-	//
-	// f, _ := os.Create("union.jpg")
-	// jpeg.Encode(f, res, nil)
-	// f.Close()
-	//
-	// print final image
 	var sizeOfOrigin = y1 + length
 	var sizeOfOther = images[1].Bounds().Dy() - length - y2
 	var res2 = image.NewRGBA(image.Rect(0, 0, images[0].Bounds().Dx(), sizeOfOrigin+sizeOfOther))
@@ -157,27 +131,31 @@ func overlaps(i1, i2 image.Image) (y1, y2, length int) {
 			panic("damn")
 		}
 
-		var hasTrues = false
 		var mask = make([]bool, to1-from1)
 
-		for yOffset := 0; yOffset < to1-from1; yOffset++ {
-			var allSame = true
-			for x := 0; x < i1.Bounds().Dx(); x++ {
+		for x := 0; x < i1.Bounds().Dx(); x++ {
+			for yOffset := 0; yOffset < to1-from1; yOffset++ {
+				var rowValue = true
 				if !closeEnough(i1.At(x, from1+yOffset), i2.At(x, from2+yOffset)) {
-					allSame = false
+					rowValue = false
+				}
+				if x > 0 {
+					if rowValue != mask[yOffset] {
+						mask[yOffset] = false
+					}
+				} else {
+					mask[yOffset] = rowValue
+				}
+			}
+			if x > 0 {
+				var _, maxLen = getLongestSequenceOfTrue(mask)
+				if maxLen < 500 {
 					break
 				}
 			}
-			if allSame == true {
-				hasTrues = true
-			}
-			mask[yOffset] = allSame
 		}
 
-		var maxPos, maxLen = 0, 0
-		if hasTrues {
-			maxPos, maxLen = getLongestSequenceOfTrue(mask)
-		}
+		var maxPos, maxLen = getLongestSequenceOfTrue(mask)
 
 		// fmt.Println("i:", offset)
 		if maxLen > length {
