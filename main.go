@@ -16,15 +16,20 @@ func main() {
 	// }
 	// var names = os.Args[1:]
 
-	var names = []string{"photo_5341437942142451795_y.jpg", "photo_5341437942142451796_y.jpg"}
+	// var names = []string{"photo_5341437942142451795_y.jpg", "photo_5341437942142451796_y.jpg"}
 	// var names = []string{"photo_5341437942142451796_y.jpg", "photo_5341437942142451795_y.jpg"}
+	// var names = []string{"1.jpg", "2.jpg"}
+	var names = []string{"3.jpg", "1+2.jpg"}
 
 	var start = time.Now()
 	var images = readAll(names)
 
+	// fmt.Println(images[0].At(222, 50).RGBA())
+	// fmt.Println(images[1].At(222, 1126))
+	// fmt.Println(closeEnough(images[0].At(222, 50), images[1].At(222, 1126)))
+
 	y1, y2, length := overlaps(images[0], images[1])
 	fmt.Println(y1, y2, length)
-	fmt.Println(time.Since(start).String())
 
 	var res image.Image
 	if y1 < y2 {
@@ -49,6 +54,8 @@ func main() {
 	f1, _ := os.Create("woohoo.jpg")
 	jpeg.Encode(f1, res, nil)
 	f1.Close()
+
+	fmt.Println(time.Since(start).String())
 }
 
 func combineImages(first, second image.Image, firstFromY, secondFromY, length int) image.Image {
@@ -126,46 +133,60 @@ func closeEnough(c1, c2 color.Color) bool {
 		r1, g1, b1, _ = c1.RGBA()
 		r2, g2, b2, _ = c2.RGBA()
 
-		diffR = float64(r1) - float64(r2)
-		diffG = float64(g1) - float64(g2)
-		diffB = float64(b1) - float64(b2)
+		diffR = float64(r1>>8) - float64(r2>>8)
+		diffG = float64(g1>>8) - float64(g2>>8)
+		diffB = float64(b1>>8) - float64(b2>>8)
 	)
 	res := math.Sqrt(diffR*diffR + diffG*diffG + diffB*diffB)
-	return res < 60000
+	return res < 150
 }
 
 func overlaps(i1, i2 image.Image) (y1, y2, length int) {
-	for offset := 1; offset < i1.Bounds().Dy()*2; offset++ {
+	var long, short = i1, i2
+	if long.Bounds().Dy() < short.Bounds().Dy() {
+		// fmt.Println("swap!")
+		long, short = short, long
+		defer func() {
+			y1, y2 = y2, y1
+		}()
+	}
+
+	// Для проверки пересечения short изображение последовательно смещается относительно long сначала на высоту short,
+	// а затем на высоту long. При сдвиге на каждый пиксель идет сравнение
+	var maxOffset = short.Bounds().Dy() + long.Bounds().Dy()
+
+	var tmp = image.NewRGBA(image.Rect(0, 0, 1440, 97))
+
+	for offset := 1; offset < maxOffset; offset++ {
 		var (
-			from1 = offset - i1.Bounds().Dy()
-			to1   = from1 + i1.Bounds().Dy()
-			from2 = i2.Bounds().Dy() - offset
-			to2   = from2 + i2.Bounds().Dy()
+			fromLong  = offset - short.Bounds().Dy()
+			toLong    = fromLong + short.Bounds().Dy()
+			fromShort = short.Bounds().Dy() - offset
 		)
-		if from1 < 0 {
-			from1 = 0
+		if fromLong < 0 {
+			fromLong = 0
 		}
-		if to1 > i1.Bounds().Dy() {
-			to1 = i1.Bounds().Dy()
+		if toLong > long.Bounds().Dy() {
+			toLong = long.Bounds().Dy()
 		}
-		if from2 < 0 {
-			from2 = 0
-		}
-		if to2 > i2.Bounds().Dy() {
-			to2 = i2.Bounds().Dy()
+		if fromShort < 0 {
+			fromShort = 0
 		}
 
-		if to1-from1 != to2-from2 {
-			fmt.Println(to1-from1, to2-from2)
-			panic("damn")
-		}
+		var mask = make([]bool, toLong-fromLong)
 
-		var mask = make([]bool, to1-from1)
+		var noNeedToCheckMask = false
+		for x := 0; x < long.Bounds().Dx(); x++ {
+			for yOffset := 0; yOffset < toLong-fromLong; yOffset++ {
 
-		for x := 0; x < i1.Bounds().Dx(); x++ {
-			for yOffset := 0; yOffset < to1-from1; yOffset++ {
+				// if offset == 224 {
+				// fmt.Println("SET!", x, yOffset)
+				// tmp.Set(x, yOffset, long.At(x, fromLong+yOffset))
+				// tmp.Set(x+720, yOffset, short.At(x, fromShort+yOffset))
+				// }
+
 				var rowValue = true
-				if !closeEnough(i1.At(x, from1+yOffset), i2.At(x, from2+yOffset)) {
+				if !closeEnough(long.At(x, fromLong+yOffset), short.At(x, fromShort+yOffset)) {
 					rowValue = false
 				}
 				if x > 0 {
@@ -178,19 +199,29 @@ func overlaps(i1, i2 image.Image) (y1, y2, length int) {
 			}
 			if x > 0 {
 				var _, maxLen = getLongestSequenceOfTrue(mask)
-				if maxLen < 500 {
+				if maxLen < 100 {
+					noNeedToCheckMask = true
 					break
 				}
 			}
 		}
 
-		var maxPos, maxLen = getLongestSequenceOfTrue(mask)
+		if offset == 224 {
+			f1, _ := os.Create("tmp.jpg")
+			jpeg.Encode(f1, tmp, nil)
+			f1.Close()
+		}
+
+		var maxPos, maxLen = 0, 0
+		if !noNeedToCheckMask {
+			maxPos, maxLen = getLongestSequenceOfTrue(mask)
+		}
 
 		// fmt.Println("i:", offset)
 		if maxLen > length {
 			length = maxLen
-			y1 = maxPos + from1
-			y2 = maxPos + from2
+			y1 = maxPos + fromLong
+			y2 = maxPos + fromShort
 
 			// fmt.Println("Var:", y1, y2, length)
 		}
