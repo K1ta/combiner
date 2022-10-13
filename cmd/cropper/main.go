@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"image/png"
+	_ "image/png"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -76,7 +79,13 @@ func processFile(dir, fileName, outputDir string, cropSize int) {
 	}
 	defer newF.Close()
 
-	if err = jpeg.Encode(newF, newImg, &jpeg.Options{Quality: 100}); err != nil {
-		fmt.Printf("failed to encode file '%s': %v\n", fileName, err)
+	if strings.HasSuffix(fileName, ".png") {
+		if err = png.Encode(newF, newImg); err != nil {
+			fmt.Printf("failed to encode file '%s' to png: %v\n", fileName, err)
+		}
+	} else {
+		if err = jpeg.Encode(newF, newImg, &jpeg.Options{Quality: 100}); err != nil {
+			fmt.Printf("failed to encode file '%s' to jpg: %v\n", fileName, err)
+		}
 	}
 }
