@@ -5,14 +5,18 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"log"
 	"math"
 	"os"
 	"time"
 )
 
-var names = []string{"photo_5341437942142451795_y.jpg", "photo_5341437942142451796_y.jpg"}
-
 func main() {
+	if len(os.Args) != 3 {
+		log.Fatal("must be 2 args")
+	}
+	var names = os.Args[1:]
+
 	var start = time.Now()
 	var images = readAll(names)
 
@@ -45,24 +49,24 @@ func main() {
 	// jpeg.Encode(f, res, nil)
 	// f.Close()
 	//
-	// // print final image
-	// var sizeOfOrigin = originY + length
-	// var sizeOfOther = images[1].Bounds().Dy() - length - otherY
-	// var res2 = image.NewRGBA(image.Rect(0, 0, images[0].Bounds().Dx(), sizeOfOrigin+sizeOfOther))
-	//
-	// for x := 0; x < images[0].Bounds().Dx(); x++ {
-	// 	for y := 0; y < originY+length; y++ {
-	// 		res2.Set(x, y, images[0].At(x, y))
-	// 	}
-	//
-	// 	for y := otherY + length; y < images[1].Bounds().Dy(); y++ {
-	// 		res2.Set(x, y-otherY-length+sizeOfOrigin, images[1].At(x, y))
-	// 	}
-	// }
-	//
-	// f1, _ := os.Create("woohoo.jpg")
-	// jpeg.Encode(f1, res2, nil)
-	// f1.Close()
+	// print final image
+	var sizeOfOrigin = y1 + length
+	var sizeOfOther = images[1].Bounds().Dy() - length - y2
+	var res2 = image.NewRGBA(image.Rect(0, 0, images[0].Bounds().Dx(), sizeOfOrigin+sizeOfOther))
+
+	for x := 0; x < images[0].Bounds().Dx(); x++ {
+		for y := 0; y < y1+length; y++ {
+			res2.Set(x, y, images[0].At(x, y))
+		}
+
+		for y := y2 + length; y < images[1].Bounds().Dy(); y++ {
+			res2.Set(x, y-y2-length+sizeOfOrigin, images[1].At(x, y))
+		}
+	}
+
+	f1, _ := os.Create("woohoo.jpg")
+	jpeg.Encode(f1, res2, nil)
+	f1.Close()
 }
 
 func readAll(names []string) []image.Image {
