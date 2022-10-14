@@ -23,7 +23,7 @@ func main() {
 	}
 	var fRes, err = os.Create(resName)
 	if err != nil {
-		log.Fatalf("Failed to create output file '%': %v", resName, err)
+		log.Fatalf("Failed to create output file '%s': %v", resName, err)
 	}
 	defer fRes.Close()
 
