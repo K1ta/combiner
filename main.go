@@ -5,28 +5,30 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"log"
 	"math"
 	"os"
 	"time"
 )
 
 func main() {
-	// if len(os.Args) != 3 {
-	// 	log.Fatal("must be 2 args")
-	// }
-	// var names = os.Args[1:]
+	if len(os.Args) != 3 && len(os.Args) != 4 {
+		log.Fatal("must be at lest 2 args")
+	}
+	var names = os.Args[1:3]
 
-	// var names = []string{"photo_5341437942142451795_y.jpg", "photo_5341437942142451796_y.jpg"}
-	// var names = []string{"photo_5341437942142451796_y.jpg", "photo_5341437942142451795_y.jpg"}
-	// var names = []string{"1.jpg", "2.jpg"}
-	var names = []string{"3.jpg", "1+2.jpg"}
+	var resName = "woohoo.jpg"
+	if len(os.Args) == 4 {
+		resName = os.Args[3]
+	}
+	var fRes, err = os.Create(resName)
+	if err != nil {
+		log.Fatalf("Failed to create output file '%': %v", resName, err)
+	}
+	defer fRes.Close()
 
 	var start = time.Now()
 	var images = readAll(names)
-
-	// fmt.Println(images[0].At(222, 50).RGBA())
-	// fmt.Println(images[1].At(222, 1126))
-	// fmt.Println(closeEnough(images[0].At(222, 50), images[1].At(222, 1126)))
 
 	y1, y2, length := overlaps(images[0], images[1])
 	fmt.Println(y1, y2, length)
@@ -37,23 +39,8 @@ func main() {
 	} else {
 		res = combineImages(images[0], images[1], y1, y2, length)
 	}
-	// var sizeOfOrigin = y1 + length
-	// var sizeOfOther = images[1].Bounds().Dy() - length - y2
-	// var res2 = image.NewRGBA(image.Rect(0, 0, images[0].Bounds().Dx(), sizeOfOrigin+sizeOfOther))
-	//
-	// for x := 0; x < images[0].Bounds().Dx(); x++ {
-	// 	for y := 0; y < y1+length; y++ {
-	// 		res2.Set(x, y, images[0].At(x, y))
-	// 	}
-	//
-	// 	for y := y2 + length; y < images[1].Bounds().Dy(); y++ {
-	// 		res2.Set(x, y-y2-length+sizeOfOrigin, images[1].At(x, y))
-	// 	}
-	// }
 
-	f1, _ := os.Create("woohoo.jpg")
-	jpeg.Encode(f1, res, nil)
-	f1.Close()
+	jpeg.Encode(fRes, res, nil)
 
 	fmt.Println(time.Since(start).String())
 }
