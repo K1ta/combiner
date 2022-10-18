@@ -2,3 +2,4 @@
 cmd/cropper/cropper
 cmd/cropper/screens
 cmd/cropper/screens_cropped
+testsources
