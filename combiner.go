@@ -1,12 +1,17 @@
 package combiner
 
 import (
+	"errors"
 	"image"
 	"image/color"
 	"math"
 )
 
 func Combine(first, second image.Image) (combined image.Image, err error) {
+	if first.Bounds().Dx() != second.Bounds().Dy() {
+		return nil, errors.New("width must be same")
+	}
+
 	y1, y2, length := getOverlap(first, second)
 
 	var res image.Image
